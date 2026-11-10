@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>vant.logistica — gestão de cargas, frota e entregas</title>
+  <meta name="description" content="Central logística da suíte vant: cargas com histórico de status, frota, motoristas e clientes, além de indicadores de atraso. API em Spring Boot." />
+  <meta name="theme-color" content="#070d12" />
+  <link rel="icon" href="marca/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="icon" href="marca/favicon-64.png" sizes="64x64" type="image/png" />
+  <link rel="apple-touch-icon" href="marca/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=2" />
+</head>
+<body>
+  <a class="pular" href="#conteudo">Ir para o conteúdo</a>
+
+  <header class="topo">
+    <div class="topo-linha">
+      <a class="marca" href="https://idalinosou.github.io/portfolio/" title="Voltar ao portfólio">
+        <img class="marca-logo" src="marca/vant-mark.png" alt="" width="807" height="592" />
+        <span>vant<span class="marca-ponto">.</span>logistica</span>
+      </a>
+
+      <nav class="nav" aria-label="Módulos da operação">
+        <button type="button" class="nav-link ativo" data-vista="painel">Painel</button>
+        <button type="button" class="nav-link" data-vista="cargas">Cargas</button>
+        <button type="button" class="nav-link" data-vista="frota">Frota</button>
+        <button type="button" class="nav-link" data-vista="motoristas">Motoristas</button>
+        <button type="button" class="nav-link" data-vista="clientes">Clientes</button>
+      </nav>
+
+      <div class="topo-acoes">
+        <span id="selo-modo" class="selo">Carregando…</span>
+        <button type="button" class="botao-secundario" id="atualizar-tudo">Atualizar</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="conteudo" class="conteudo">
+    <p class="aviso" id="aviso-geral" role="status" aria-live="polite"></p>
+
+    <!-- Painel -->
+    <section class="vista" id="vista-painel">
+      <div class="abertura">
+        <p class="rotulo">Central de operações · Spring Boot</p>
+        <h1>Sua operação, em movimento.</h1>
+        <p class="subtitulo">
+          Cargas, frota e equipe no mesmo lugar. Cada mudança de status fica registrada
+          no histórico da carga e as entregas atrasadas aparecem em destaque.
+        </p>
+      </div>
+
+      <div class="destaques" id="cartoes-painel">
+        <article class="destaque">
+          <small>Total de cargas</small>
+          <strong id="cartao-total">0</strong>
+          <span>Operações cadastradas</span>
+        </article>
+        <article class="destaque">
+          <small>Em trânsito</small>
+          <strong id="cartao-transito">0</strong>
+          <span>Em deslocamento agora</span>
+        </article>
+        <article class="destaque">
+          <small>Pendentes</small>
+          <strong id="cartao-pendentes">0</strong>
+          <span>Aguardando saída</span>
+        </article>
+        <article class="destaque alerta">
+          <small>Atrasadas</small>
+          <strong id="cartao-atrasadas">0</strong>
+          <span>Previsão vencida em aberto</span>
+        </article>
+        <article class="destaque">
+          <small>Entregues</small>
+          <strong id="cartao-entregues">0</strong>
+          <span>Operações concluídas</span>
+        </article>
+      </div>
+
+      <div class="grade-painel">
+        <section class="painel">
+          <div class="painel-topo">
+            <div>
+              <h2>Últimas cargas</h2>
+              <p class="painel-sub">Movimentações mais recentes</p>
+            </div>
+            <button type="button" class="link-acao" data-ir="cargas">Ver todas →</button>
+          </div>
+          <div class="tabela-rolagem">
+            <table class="tabela">
+              <thead>
+                <tr><th>Código</th><th>Rota</th><th>Cliente</th><th>Status</th></tr>
+              </thead>
+              <tbody id="corpo-ultimas">
+                <tr><td colspan="4" class="vazio">Carregando…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="painel">
+          <h2>Recursos</h2>
+          <ul class="recursos">
+            <li><span>Veículos</span><b id="recurso-veiculos">0</b></li>
+            <li><span>Disponíveis</span><b id="recurso-veiculos-disponiveis">0</b></li>
+            <li><span>Motoristas</span><b id="recurso-motoristas">0</b></li>
+            <li><span>Ativos</span><b id="recurso-motoristas-ativos">0</b></li>
+            <li><span>Clientes</span><b id="recurso-clientes">0</b></li>
+          </ul>
+          <div class="alerta-operacao" id="alerta-atrasadas" hidden>
+            <strong>Atenção na operação</strong>
+            <p id="texto-atrasadas">Existem cargas com a previsão vencida.</p>
+            <button type="button" class="botao-secundario" data-ir="cargas">Revisar cargas</button>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- Cargas -->
+    <section class="vista" id="vista-cargas" hidden>
+      <div class="abertura compacta">
+        <p class="rotulo">Operação</p>
+        <h1>Cargas</h1>
+        <p class="subtitulo">Cadastre a carga, acompanhe a rota e avance o status até a entrega.</p>
+      </div>
+
+      <div class="filtros" aria-label="Filtros de cargas">
+        <div class="chips" id="chips-status" role="group" aria-label="Filtrar por status"></div>
+        <div class="filtros-linha">
+          <label class="busca">
+            <span class="oculto">Buscar carga</span>
+            <input type="search" id="busca-cargas" placeholder="Buscar por código, rota ou cliente…" autocomplete="off" />
+          </label>
+          <button type="button" class="botao-principal" id="botao-nova-carga">Nova carga</button>
+        </div>
+      </div>
+
+      <section class="painel" id="painel-form-carga" hidden>
+        <div class="painel-topo">
+          <h2 id="titulo-form-carga">Nova carga</h2>
+          <button type="button" class="link-acao" id="fechar-form-carga">Fechar</button>
+        </div>
+        <form class="formulario" id="form-carga" novalidate>
+          <div class="form-grade">
+            <label>Código <input type="text" id="carga-codigo" placeholder="CAR-001" maxlength="40" required /></label>
+            <label>Origem <input type="text" id="carga-origem" placeholder="Betim - MG" maxlength="160" required /></label>
+            <label>Destino <input type="text" id="carga-destino" placeholder="Belo Horizonte - MG" maxlength="160" required /></label>
+            <label>Previsão de entrega <input type="date" id="carga-previsao" /></label>
+            <label>Cliente
+              <select id="carga-cliente"><option value="">Sem cliente</option></select>
+            </label>
+            <label>Motorista
+              <select id="carga-motorista"><option value="">Sem motorista</option></select>
+            </label>
+            <label>Veículo
+              <select id="carga-veiculo"><option value="">Sem veículo</option></select>
+            </label>
+          </div>
+          <div class="form-acoes">
+            <button type="submit" class="botao-principal" id="salvar-carga">Cadastrar carga</button>
+            <button type="button" class="botao-secundario" id="cancelar-carga" hidden>Cancelar edição</button>
+          </div>
+        </form>
+      </section>
+
+      <p class="aviso" id="aviso-cargas" role="status" aria-live="polite"></p>
+
+      <section class="painel">
+        <div class="painel-topo">
+          <div>
+            <h2>Cargas cadastradas</h2>
+            <p class="painel-sub" id="contagem-cargas">0 registros</p>
+          </div>
+        </div>
+        <div class="tabela-rolagem">
+          <table class="tabela">
+            <thead>
+              <tr>
+                <th>Código</th><th>Rota</th><th>Cliente</th><th>Recursos</th>
+                <th>Previsão</th><th>Status</th><th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="corpo-cargas">
+              <tr><td colspan="7" class="vazio">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <nav class="paginacao" id="paginacao-cargas" aria-label="Paginação de cargas"></nav>
+      </section>
+
+      <section class="painel" id="painel-historico" hidden>
+        <div class="painel-topo">
+          <div>
+            <h2 id="titulo-historico">Histórico</h2>
+            <p class="painel-sub">Todas as mudanças de status da carga</p>
+          </div>
+          <button type="button" class="link-acao" id="fechar-historico">Fechar</button>
+        </div>
+        <ol class="linha-historico" id="lista-historico"></ol>
+      </section>
+    </section>
+
+    <!-- Frota -->
+    <section class="vista" id="vista-frota" hidden>
+      <div class="abertura compacta">
+        <p class="rotulo">Recursos</p>
+        <h1>Frota</h1>
+        <p class="subtitulo">Veículos disponíveis, em operação ou em manutenção.</p>
+      </div>
+
+      <section class="painel">
+        <h2 id="titulo-form-veiculo">Cadastrar veículo</h2>
+        <form class="formulario" id="form-veiculo" novalidate>
+          <div class="form-grade">
+            <label>Placa <input type="text" id="veiculo-placa" placeholder="ABC1D23" maxlength="12" required /></label>
+            <label>Modelo <input type="text" id="veiculo-modelo" placeholder="Caminhão baú" maxlength="100" required /></label>
+            <label>Tipo <input type="text" id="veiculo-tipo" placeholder="Caminhão" maxlength="60" /></label>
+            <label>Capacidade <input type="text" id="veiculo-capacidade" placeholder="12 toneladas" maxlength="60" /></label>
+            <label>Status
+              <select id="veiculo-status">
+                <option value="DISPONIVEL">Disponível</option>
+                <option value="EM_OPERACAO">Em operação</option>
+                <option value="MANUTENCAO">Manutenção</option>
+              </select>
+            </label>
+          </div>
+          <div class="form-acoes">
+            <button type="submit" class="botao-principal" id="salvar-veiculo">Cadastrar veículo</button>
+            <button type="button" class="botao-secundario" id="cancelar-veiculo" hidden>Cancelar edição</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="painel">
+        <h2>Frota cadastrada</h2>
+        <div class="tabela-rolagem">
+          <table class="tabela">
+            <thead>
+              <tr><th>Placa</th><th>Modelo</th><th>Tipo</th><th>Capacidade</th><th>Status</th><th>Ações</th></tr>
+            </thead>
+            <tbody id="corpo-veiculos">
+              <tr><td colspan="6" class="vazio">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <!-- Motoristas -->
+    <section class="vista" id="vista-motoristas" hidden>
+      <div class="abertura compacta">
+        <p class="rotulo">Equipe</p>
+        <h1>Motoristas</h1>
+        <p class="subtitulo">Quem está disponível para assumir as próximas cargas.</p>
+      </div>
+
+      <section class="painel">
+        <h2 id="titulo-form-motorista">Cadastrar motorista</h2>
+        <form class="formulario" id="form-motorista" novalidate>
+          <div class="form-grade">
+            <label>Nome <input type="text" id="motorista-nome" maxlength="140" required /></label>
+            <label>Documento <input type="text" id="motorista-documento" maxlength="30" /></label>
+            <label>Telefone <input type="text" id="motorista-telefone" maxlength="40" /></label>
+            <label>CNH <input type="text" id="motorista-cnh" maxlength="40" /></label>
+            <label>Status
+              <select id="motorista-status">
+                <option value="ATIVO">Ativo</option>
+                <option value="INATIVO">Inativo</option>
+              </select>
+            </label>
+          </div>
+          <div class="form-acoes">
+            <button type="submit" class="botao-principal" id="salvar-motorista">Cadastrar motorista</button>
+            <button type="button" class="botao-secundario" id="cancelar-motorista" hidden>Cancelar edição</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="painel">
+        <h2>Motoristas cadastrados</h2>
+        <div class="tabela-rolagem">
+          <table class="tabela">
+            <thead>
+              <tr><th>Nome</th><th>Documento</th><th>Telefone</th><th>CNH</th><th>Status</th><th>Ações</th></tr>
+            </thead>
+            <tbody id="corpo-motoristas">
+              <tr><td colspan="6" class="vazio">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <!-- Clientes -->
+    <section class="vista" id="vista-clientes" hidden>
+      <div class="abertura compacta">
+        <p class="rotulo">Carteira</p>
+        <h1>Clientes</h1>
+        <p class="subtitulo">Empresas atendidas pela operação e seus contatos.</p>
+      </div>
+
+      <section class="painel">
+        <h2 id="titulo-form-cliente">Cadastrar cliente</h2>
+        <form class="formulario" id="form-cliente" novalidate>
+          <div class="form-grade">
+            <label>Nome <input type="text" id="cliente-nome" maxlength="140" required /></label>
+            <label>Documento <input type="text" id="cliente-documento" maxlength="30" /></label>
+            <label>Telefone <input type="text" id="cliente-telefone" maxlength="40" /></label>
+            <label>E-mail <input type="email" id="cliente-email" maxlength="140" /></label>
+            <label>Cidade <input type="text" id="cliente-cidade" maxlength="100" /></label>
+          </div>
+          <div class="form-acoes">
+            <button type="submit" class="botao-principal" id="salvar-cliente">Cadastrar cliente</button>
+            <button type="button" class="botao-secundario" id="cancelar-cliente" hidden>Cancelar edição</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="painel">
+        <h2>Clientes cadastrados</h2>
+        <div class="tabela-rolagem">
+          <table class="tabela">
+            <thead>
+              <tr><th>Nome</th><th>Documento</th><th>Telefone</th><th>E-mail</th><th>Cidade</th><th>Ações</th></tr>
+            </thead>
+            <tbody id="corpo-clientes">
+              <tr><td colspan="6" class="vazio">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <p>vant.logistica · parte da suíte <strong>vant.</strong> · operação de demonstração</p>
+    <a href="https://idalinosou.github.io/portfolio/">Voltar ao portfólio</a>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <span id="toast-texto"></span>
+  </div>
+
+  <script src="app.js?v=1"></script>
+</body>
+</html>

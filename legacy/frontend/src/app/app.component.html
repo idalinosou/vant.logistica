@@ -1,0 +1,50 @@
+<div class="shell">
+ <aside class="sidebar">
+  <div class="brand"><div class="brand-mark">V</div><div><b>VANT</b><small>LOGÍSTICA</small></div></div>
+  <div class="side-label">GESTÃO</div>
+  <button [class.active]="modulo==='Dashboard'" (click)="abrir('Dashboard')">▦ <span>Dashboard</span></button>
+  <button [class.active]="modulo==='Cargas'" (click)="abrir('Cargas')">▣ <span>Cargas</span></button>
+  <button [class.active]="modulo==='Frota'" (click)="abrir('Frota')">▰ <span>Frota</span></button>
+  <button [class.active]="modulo==='Motoristas'" (click)="abrir('Motoristas')">♙ <span>Motoristas</span></button>
+  <button [class.active]="modulo==='Clientes'" (click)="abrir('Clientes')">♧ <span>Clientes</span></button>
+  <div class="side-foot"><span class="online"></span> Sistema operacional</div>
+ </aside>
+ <main>
+  <header><div><small>VANT / {{modulo}}</small><h1>{{modulo==='Dashboard'?'Visão geral da operação':modulo}}</h1></div><button class="refresh" (click)="atualizarTudo()">↻ Atualizar</button></header>
+  <div class="alerts" *ngIf="erro||sucesso"><span class="error" *ngIf="erro">{{erro}}</span><span class="success" *ngIf="sucesso">{{sucesso}}</span></div>
+  <section *ngIf="modulo==='Dashboard'">
+   <div class="hero"><div><span class="eyebrow">CONTROLE INTELIGENTE DE OPERAÇÕES</span><h2>Sua logística,<br><em>em movimento.</em></h2><p>Acompanhe cargas, frota e entregas em um só lugar.</p></div><div class="truck-art"><div class="truck"><div class="cab"></div><div class="trailer"><b>VANT</b><small>LOGÍSTICA</small></div><i></i><i></i></div><span>FROTA VANT • OPERAÇÃO</span></div></div>
+   <div class="metrics">
+    <article><small>TOTAL DE CARGAS</small><strong>{{dashboard.totalCargas}}</strong><span>Operações cadastradas</span></article>
+    <article><small>PENDENTES</small><strong>{{dashboard.pendentes}}</strong><span>Aguardando movimentação</span></article>
+    <article><small>EM TRÂNSITO</small><strong>{{dashboard.emTransito}}</strong><span>Em deslocamento</span></article>
+    <article><small>ENTREGUES</small><strong>{{dashboard.entregues}}</strong><span>Operações concluídas</span></article>
+   </div>
+   <div class="lower"><section class="panel"><div class="panel-head"><div><h3>Últimas cargas</h3><small>Movimentações recentes</small></div><button class="link" (click)="abrir('Cargas')">Ver todas →</button></div>
+    <div class="table-wrap"><table><thead><tr><th>CÓDIGO</th><th>DESTINO</th><th>STATUS</th></tr></thead><tbody><tr *ngFor="let c of cargas.slice(0,5)"><td><b>{{c.codigo}}</b></td><td>{{c.destino}}</td><td><span class="pill" [class.green]="c.status==='Entregue'" [class.blue]="c.status==='Em trânsito'">{{c.status}}</span></td></tr><tr *ngIf="!cargas.length"><td colspan="3" class="empty">Nenhuma carga cadastrada.</td></tr></tbody></table></div>
+   </section><section class="panel stats"><h3>Recursos operacionais</h3><div><span>Veículos cadastrados</span><b>{{dashboard.veiculos}}</b></div><div><span>Motoristas cadastrados</span><b>{{dashboard.motoristas}}</b></div><div><span>Clientes cadastrados</span><b>{{dashboard.clientes}}</b></div></section></div>
+  </section>
+
+  <section *ngIf="modulo==='Cargas'">
+   <div class="panel form-panel"><h3>{{form.id?'Editar carga':'Cadastrar nova carga'}}</h3><div class="form-grid">
+    <label>Código<input [(ngModel)]="form.codigo" placeholder="CAR-001"></label><label>Origem<input [(ngModel)]="form.origem" placeholder="Betim - MG"></label><label>Destino<input [(ngModel)]="form.destino" placeholder="Belo Horizonte - MG"></label><label>Cliente<input [(ngModel)]="form.cliente" placeholder="Nome do cliente"></label><label>Motorista<input [(ngModel)]="form.motorista" placeholder="Nome do motorista"></label><label>Veículo<input [(ngModel)]="form.veiculo" placeholder="Placa ou identificação"></label><label>Status<select [(ngModel)]="form.status"><option>Pendente</option><option>Em trânsito</option><option>Entregue</option></select></label><label>Previsão de entrega<input type="date" [(ngModel)]="form.previsao_entrega"></label>
+   </div><div class="actions"><button class="primary" *ngIf="!form.id" (click)="salvar()">Cadastrar carga</button><button class="primary" *ngIf="form.id" (click)="atualizarCarga()">Salvar alterações</button><button class="secondary" *ngIf="form.id" (click)="cancelarEdicao()">Cancelar</button></div></div>
+   <div class="panel"><div class="panel-head"><h3>Cargas cadastradas</h3><small>{{cargas.length}} registros</small></div><div class="table-wrap"><table><thead><tr><th>CÓDIGO</th><th>ORIGEM</th><th>DESTINO</th><th>CLIENTE</th><th>STATUS</th><th>AÇÕES</th></tr></thead><tbody><tr *ngFor="let c of cargas"><td><b>{{c.codigo}}</b></td><td>{{c.origem}}</td><td>{{c.destino}}</td><td>{{c.cliente}}</td><td><span class="pill" [class.green]="c.status==='Entregue'" [class.blue]="c.status==='Em trânsito'">{{c.status}}</span></td><td class="row-actions"><button (click)="editarCarga(c)">Editar</button><button (click)="abrirHistorico(c)">Histórico</button><button class="danger" (click)="excluir('cargas',c.id)">Excluir</button></td></tr><tr *ngIf="!cargas.length"><td colspan="6" class="empty">Cadastre a primeira carga acima.</td></tr></tbody></table></div></div>
+   <div class="panel" *ngIf="cargaHistorico"><div class="panel-head"><h3>Histórico — {{cargaHistorico.codigo}}</h3><button class="secondary" (click)="cargaHistorico=null">Fechar</button></div><div *ngFor="let h of historico" class="history-row"><b>{{h.statusAnterior||'Criação'}}</b> → <b>{{h.novoStatus}}</b><small>{{h.dataAlteracao|date:'dd/MM/yyyy HH:mm'}}</small></div><p *ngIf="!historico.length" class="empty">Ainda não existem alterações de status.</p></div>
+  </section>
+
+  <section *ngIf="modulo==='Frota'">
+   <div class="panel form-panel"><h3>Cadastrar veículo</h3><div class="form-grid"><label>Placa<input [(ngModel)]="form.placa" placeholder="ABC1D23"></label><label>Modelo<input [(ngModel)]="form.modelo" placeholder="Caminhão baú"></label><label>Tipo<input [(ngModel)]="form.tipo" placeholder="Pesado"></label><label>Capacidade<input [(ngModel)]="form.capacidade" placeholder="12 toneladas"></label><label>Status<select [(ngModel)]="form.status"><option>Disponível</option><option>Em operação</option><option>Manutenção</option></select></label></div><button class="primary" (click)="salvar()">Cadastrar veículo</button></div>
+   <div class="panel"><h3>Frota cadastrada</h3><div class="table-wrap"><table><thead><tr><th>PLACA</th><th>MODELO</th><th>TIPO</th><th>CAPACIDADE</th><th>STATUS</th><th>AÇÃO</th></tr></thead><tbody><tr *ngFor="let v of veiculos"><td>{{v.placa}}</td><td>{{v.modelo}}</td><td>{{v.tipo}}</td><td>{{v.capacidade}}</td><td>{{v.status}}</td><td><button class="danger" (click)="excluir('veiculos',v.id)">Excluir</button></td></tr><tr *ngIf="!veiculos.length"><td colspan="6" class="empty">Nenhum veículo cadastrado.</td></tr></tbody></table></div></div>
+  </section>
+  <section *ngIf="modulo==='Motoristas'">
+   <div class="panel form-panel"><h3>Cadastrar motorista</h3><div class="form-grid"><label>Nome<input [(ngModel)]="form.nome"></label><label>Documento<input [(ngModel)]="form.documento"></label><label>Telefone<input [(ngModel)]="form.telefone"></label><label>CNH<input [(ngModel)]="form.cnh"></label></div><button class="primary" (click)="salvar()">Cadastrar motorista</button></div>
+   <div class="panel"><h3>Motoristas</h3><div class="table-wrap"><table><thead><tr><th>NOME</th><th>DOCUMENTO</th><th>TELEFONE</th><th>CNH</th><th>STATUS</th><th>AÇÃO</th></tr></thead><tbody><tr *ngFor="let m of motoristas"><td>{{m.nome}}</td><td>{{m.documento}}</td><td>{{m.telefone}}</td><td>{{m.cnh}}</td><td>{{m.status}}</td><td><button class="danger" (click)="excluir('motoristas',m.id)">Excluir</button></td></tr><tr *ngIf="!motoristas.length"><td colspan="6" class="empty">Nenhum motorista cadastrado.</td></tr></tbody></table></div></div>
+  </section>
+  <section *ngIf="modulo==='Clientes'">
+   <div class="panel form-panel"><h3>Cadastrar cliente</h3><div class="form-grid"><label>Nome<input [(ngModel)]="form.nome"></label><label>Documento<input [(ngModel)]="form.documento"></label><label>Telefone<input [(ngModel)]="form.telefone"></label><label>E-mail<input [(ngModel)]="form.email"></label><label>Cidade<input [(ngModel)]="form.cidade"></label></div><button class="primary" (click)="salvar()">Cadastrar cliente</button></div>
+   <div class="panel"><h3>Clientes</h3><div class="table-wrap"><table><thead><tr><th>NOME</th><th>DOCUMENTO</th><th>TELEFONE</th><th>E-MAIL</th><th>CIDADE</th><th>AÇÃO</th></tr></thead><tbody><tr *ngFor="let c of clientes"><td>{{c.nome}}</td><td>{{c.documento}}</td><td>{{c.telefone}}</td><td>{{c.email}}</td><td>{{c.cidade}}</td><td><button class="danger" (click)="excluir('clientes',c.id)">Excluir</button></td></tr><tr *ngIf="!clientes.length"><td colspan="6" class="empty">Nenhum cliente cadastrado.</td></tr></tbody></table></div></div>
+  </section>
+  <footer>VANT LOGÍSTICA · Plataforma de gestão logística · Ambiente local demonstrativo</footer>
+ </main>
+</div>
